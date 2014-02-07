@@ -1,0 +1,91 @@
+       log_format postdata '$remote_addr - $remote_user [$time_local] '
+          '"$request" $status $body_bytes_sent "$http_referer" '
+          '"$http_user_agent" "$http_x_forwarded_for" "$request_body"';
+		  
+		  log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+		                        '$status $body_bytes_sent "$http_referer" '
+		                        '"$http_user_agent" "$http_x_forwarded_for"';
+								
+								
+	log_format postdata '$remote_addr - $remote_user [$time_local] '
+	  '"$request" $status $body_bytes_sent "$http_referer" '
+	  '"$http_user_agent" "$http_x_forwarded_for" "$request_body"';
+	  
+	  
+
+
+
+ 
+# Url
+"1"
+	# the wire format version, that represents this order of fields in the log output.
+"$msec"
+	# current time in seconds with the milliseconds resolution
+"$request_uri" 
+	# full original request URI (with arguments)
+"nginx"
+	# A literal to detect what server we are working with
+"$nginx_version"
+	# Version of the server
+# Authentication
+"$http_date"
+	# http://tools.ietf.org/html/rfc2616#section-14.17
+	# Date Format: http://tools.ietf.org/html/rfc1123#page-55
+"$http_authorization"
+	# HMAC-MD5
+	# http://en.wikipedia.org/wiki/Hash-based_message_authentication_code
+	
+"$time_iso8601"
+	# local time in the ISO 8601 standard format
+ 
+# Required by Mark
+"$http_user_agent"
+	# http://tools.ietf.org/html/rfc2616#section-14.43
+"$http_x_forwarded_for"
+	# http://en.wikipedia.org/wiki/X-Forwarded-For
+	# This should be the real ip of the client connecting to HAProxy
+"$remote_addr"
+	# client address (IP of client connecting to the nginx server aka HAProxy)
+
+# About Request
+"$status"
+	# Http response status
+"$request_method"
+	# Http request method - request method, usually “GET” or “POST”
+"$request_completion"
+	# “OK” if a request has completed, or an empty string otherwise
+"$server_protocol"
+	# request protocol, usually “HTTP/1.0” or “HTTP/1.1”
+"$content_type"
+	# “Content-Type” request header field
+"$http_referer"
+	# http://tools.ietf.org/html/rfc1945#section-10.13
+"$body_bytes_sent"
+	# number of bytes sent to a client, not counting the response header; this variable is compatible with the “%B” parameter of the mod_log_config Apache module
+"$request_length"
+	# request length (including request line, header, and request body)
+"$request_time"
+	# request processing time in seconds with a milliseconds resolution (1.3.9, 1.2.6); time elapsed since the first bytes were read from the client
+
+"$hostname"
+	# host name from the Http request line
+# Body
+"$request_body"
+	# request body
+	# Encoding for binary
+	# Results encoded in hex format \x00:
+	# binary numbers 0-31 [\x00-\x1F]
+	# binary number 34 [\x22]
+	# binary number 92 [\x5C]
+	# binary number 127-255 [\x7F-\xFF]
+	
+
+---------------------------------------------
+
+log_format postdata '"1" "$msec" "$request_uri" "nginx" "$nginx_version" '
+  '"$http_date" "$http_authorization" '
+  '"$time_iso8601" '
+  '"$http_user_agent" "$http_x_forwarded_for" "$remote_addr" '
+  '"$status" "$request_method" "$request_completion" "$server_protocol" "$content_type" "$http_referer" "$body_bytes_sent" "$request_length"   "$request_time" '
+  '"$hostname" '
+  '"$request_body"';

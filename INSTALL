@@ -1,0 +1,184 @@
+
+###############
+# Install nginx
+###############
+
+export NGINX_REPO_FILE=/etc/yum.repos.d/nginx.repo
+touch $NGINX_REPO_FILE
+chmod 644 $NGINX_REPO_FILE
+chown root:root $NGINX_REPO_FILE
+
+
+echo "[nginx]" > $NGINX_REPO_FILE
+echo "name=nginx repo" >> $NGINX_REPO_FILE
+echo 'baseurl=http://nginx.org/packages/centos/$releasever/$basearch/' >> $NGINX_REPO_FILE
+echo "gpgcheck=0" >> $NGINX_REPO_FILE
+echo "enabled=1" >> $NGINX_REPO_FILE
+
+# Verify it worked
+cat $NGINX_REPO_FILE
+yum repolist
+
+#install nginx 
+yum -y install nginx.x86_64
+
+
+# config: /etc/nginx/nginx.conf
+# config: /etc/sysconfig/nginx
+# pidfile: /var/run/nginx.pid
+# User configs
+# /etc/nginx/conf.d/*.conf;
+# Log location
+# /var/log/nginx/access.log
+
+# Past the following config to nginx.conf
+vi /etc/nginx/nginx.conf
+####################################################
+# Start Nginx Config - /etc/nginx/nginx.conf
+####################################################
+
+user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+	# Default format
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    # Format Created to record posts - Needs work
+	# TODO: Test $request_body
+	# TODO: Insert \x01 character for default hive separator
+	# TODO: Organize format of output
+	# TODO: Get sample client in curl example or python requests
+	log_format postdata '$uri $args $msec $connection_requests $remote_addr - $remote_user [$time_local] '
+          '"$request" $status $body_bytes_sent "$http_referer" '
+          '"$http_user_agent" "$http_x_forwarded_for" "$request_body"';
+    access_log  /var/log/nginx/access.log  main;
+	
+	# Added default error log and level
+    error_log /var/log/nginx/error.log warn;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+####################################################
+# End Nginx Config
+####################################################
+
+# Past the following config to nginx_beacon.conf
+vi /etc/nginx/conf.d/nginx_beacon.conf
+####################################################
+# Start Nginx Beacon Config - /etc/nginx/conf.d/nginx_beacon.conf
+####################################################
+server {
+
+	# Main documentation page
+	# http://nginx.org/en/docs/
+	#
+	# Core Functionality
+	# http://nginx.org/en/docs/ngx_core_module.html
+	#
+	# Core Module Documentation
+	# http://nginx.org/en/docs/http/ngx_http_core_module.html#log_subrequest
+
+    listen 80 default;
+	# Set the post size max to 2 megs
+	# Limit according to spec is 1 meg for posts
+	#
+    client_body_buffer_size 2m;
+    client_max_body_size 2m;
+    large_client_header_buffers 4 24k;
+	
+	# Don't need this directive will accept for any host
+    # server_name xxxx.kixeye.com;
+	
+
+	# http://nginx.org/en/docs/http/ngx_http_log_module.html#access_log
+	
+	# $msec
+	#   time in seconds with a milliseconds resolution at the time of the log write
+	# $connection_requests
+	#   the current number of requests made through a connection (1.1.18) 
+	# $remote_addr
+	# $remote_user
+	# $time_local
+    # $request
+	# $status 
+	# $body_bytes_sent
+	# $http_referer
+    # $http_user_agent
+	# $http_x_forwarded_for
+	# $request_body
+
+    root /var/www/;
+
+	# Stub Status Module 
+	# http://wiki.nginx.org/HttpStubStatusModule
+	# So you can get the nginx status locally
+    location /nginx_status {
+            stub_status on;
+            access_log   off;
+            allow 127.0.0.1;
+            deny all;
+    }
+
+
+	location / {
+		error_page 400 /400.html;
+	}
+	
+	# Check location to understand ^~
+	# http://wiki.nginx.org/HttpCoreModule#location
+	
+	location ^~ /collector/v3/ {
+		# possibly needed to request the body for logging apparently it doesn't always show
+		# http://wiki.nginx.org/HttpEchoModule#echo_read_request_body
+		# Disscussion here: http://stackoverflow.com/questions/4939382/logging-post-data-from-request-body
+		# echo_read_request_body;
+		
+		access_log /var/log/nginx/access-collector-v3.log postdata;
+		
+		# Module ngx_http_empty_gif_module module emits single-pixel transparent GIF.
+		empty_gif;
+	}
+	
+	# Using Server Name Variable Capture
+	# http://nginx.org/en/docs/http/server_names.html#regex_names
+	#
+	# http://nginx.org/en/docs/http/ngx_http_rewrite_module.html
+	# In the old documentation is a reference to ~ needed in named captures
+	# http://wiki.nginx.org/HttpRewriteModule
+	# "Also note that named subexpressions (?<name>) should be used when accessing variables from a map using regular expressions (patterns begininng with ~) because the map runs on demand and will override $1 (even when named subexpressions are used in the map)."
+	
+    location ~ /data/(?<version>v3)/(?<game>.+)/(?<event>.+)/ {
+		rewrite ^/data/ /collector/v3/?version=$version&game=$game&event=$event last;
+    }
+
+}
+
+####################################################
+# End Nginx Beacon Config
+####################################################
+
+
+chkconfig nginx on
+/etc/init.d/nginx start
